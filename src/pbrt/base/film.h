@@ -19,10 +19,11 @@ class VisibleSurface;
 class RGBFilm;
 class GBufferFilm;
 class SpectralFilm;
+class ColorFilterArrayFilm;
 class PixelSensor;
 
 // Film Definition
-class Film : public TaggedPointer<RGBFilm, GBufferFilm, SpectralFilm> {
+class Film : public TaggedPointer<RGBFilm, GBufferFilm, SpectralFilm, ColorFilterArrayFilm> {
   public:
     // Film Interface
     PBRT_CPU_GPU inline void AddSample(Point2i pFilm, SampledSpectrum L,
