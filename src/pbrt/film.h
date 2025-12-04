@@ -30,6 +30,89 @@
 #include <thread>
 #include <vector>
 
+//Spectral sensitivities, werden angepasst wenn Prof Braun uns die Daten schickt
+//https://github.com/butcherg/ssf-data/blob/master/
+static constexpr int   H2_SSF_SAMPLES = 33;
+
+static constexpr Float H2_SSF_BANDS[H2_SSF_SAMPLES] = {
+    400.f, 410.f, 420.f, 430.f, 440.f, 450.f, 460.f, 470.f, 480.f, 490.f,
+    500.f, 510.f, 520.f, 530.f, 540.f, 550.f, 560.f, 570.f, 580.f, 590.f,
+    600.f, 610.f, 620.f, 630.f, 640.f, 650.f, 660.f, 670.f, 680.f, 690.f,
+    700.f, 710.f, 720.f
+};
+
+static constexpr Float H2_red_ssf[H2_SSF_SAMPLES] = {
+    0.011502f, 0.010943f, 0.009814f, 0.008881f, 0.009348f,
+    0.010582f, 0.014842f, 0.023967f, 0.028472f, 0.029149f,
+    0.037155f, 0.044464f, 0.050044f, 0.058435f, 0.064967f,
+    0.069375f, 0.059423f, 0.063703f, 0.107500f, 0.303100f,
+    0.469380f, 0.517160f, 0.350020f, 0.323390f, 0.233930f,
+    0.160610f, 0.107610f, 0.076421f, 0.047979f, 0.026946f,
+    0.017900f, 0.011725f, 0.007116f
+};
+
+static constexpr Float H2_green_ssf[H2_SSF_SAMPLES] = {
+    0.010796f, 0.014396f, 0.018709f, 0.025698f, 0.036083f,
+    0.054893f, 0.095247f, 0.185540f, 0.267700f, 0.326000f,
+    0.474500f, 0.685860f, 0.867270f, 1.000000f, 0.957900f,
+    0.938680f, 0.783280f, 0.671550f, 0.476000f, 0.310970f,
+    0.133910f, 0.059444f, 0.022136f, 0.018125f, 0.012011f,
+    0.008557f, 0.006527f, 0.006095f, 0.005276f, 0.004191f,
+    0.003890f, 0.002988f, 0.001873f
+};
+
+static constexpr Float H2_blue_ssf[H2_SSF_SAMPLES] = {
+    0.260100f, 0.383000f, 0.442320f, 0.520190f, 0.584060f,
+    0.710920f, 0.759570f, 0.827430f, 0.857600f, 0.806730f,
+    0.702560f, 0.560780f, 0.384890f, 0.251890f, 0.149100f,
+    0.090586f, 0.053560f, 0.042300f, 0.031948f, 0.026033f,
+    0.018909f, 0.015748f, 0.010347f, 0.010878f, 0.008875f,
+    0.007382f, 0.005871f, 0.004988f, 0.003601f, 0.002395f,
+    0.001931f, 0.001396f, 0.000892f
+};
+
+// Canon 60D spectral sensitivity (normalized)
+// Wavelength range: 400–720 nm, step 10 nm
+
+static constexpr int   C60D_SSF_SAMPLES = 33;
+
+static constexpr Float C60D_SSF_BANDS[C60D_SSF_SAMPLES] = {
+    400.f, 410.f, 420.f, 430.f, 440.f, 450.f, 460.f, 470.f, 480.f, 490.f,
+    500.f, 510.f, 520.f, 530.f, 540.f, 550.f, 560.f, 570.f, 580.f, 590.f,
+    600.f, 610.f, 620.f, 630.f, 640.f, 650.f, 660.f, 670.f, 680.f, 690.f,
+    700.f, 710.f, 720.f
+};
+
+static constexpr Float C60D_red_ssf[C60D_SSF_SAMPLES] = {
+    0.003694f, 0.005789f, 0.011972f, 0.006010f, 0.003506f,
+    0.003014f, 0.003971f, 0.006949f, 0.016477f, 0.024973f,
+    0.033583f, 0.052786f, 0.063128f, 0.080597f, 0.099936f,
+    0.158630f, 0.199190f, 0.292000f, 0.444020f, 0.547200f,
+    0.518150f, 0.510120f, 0.402940f, 0.353470f, 0.276200f,
+    0.234350f, 0.172640f, 0.131780f, 0.054995f, 0.009011f,
+    0.002072f, 0.000538f, 0.000146f
+};
+
+static constexpr Float C60D_green_ssf[C60D_SSF_SAMPLES] = {
+    0.004016f, 0.010547f, 0.044575f, 0.050839f, 0.070745f,
+    0.091766f, 0.127860f, 0.270330f, 0.570340f, 0.621030f,
+    0.811230f, 0.933340f, 0.879250f, 1.000000f, 0.900320f,
+    0.898210f, 0.752410f, 0.718610f, 0.565570f, 0.439870f,
+    0.273290f, 0.160990f, 0.077993f, 0.051902f, 0.034045f,
+    0.025987f, 0.018665f, 0.018169f, 0.010452f, 0.002445f,
+    0.000711f, 0.000218f, 0.000083f
+};
+
+static constexpr Float C60D_blue_ssf[C60D_SSF_SAMPLES] = {
+    0.021702f, 0.097758f, 0.498980f, 0.659170f, 0.696250f,
+    0.809490f, 0.854470f, 0.794600f, 0.720310f, 0.621000f,
+    0.526680f, 0.397330f, 0.219160f, 0.155690f, 0.104950f,
+    0.080773f, 0.050105f, 0.041103f, 0.033563f, 0.027940f,
+    0.019429f, 0.014083f, 0.008888f, 0.007996f, 0.007504f,
+    0.008546f, 0.008251f, 0.008116f, 0.003858f, 0.000747f,
+    0.000202f, 0.000075f, 0.000050f
+};
+
 namespace pbrt {
 
 // PixelSensor Definition
@@ -544,8 +627,30 @@ class ColorFilterArrayFilm : public FilmBase {
         // Start by doing more or less what RGBFilm::AddSample() does so
         // that we can maintain accurate RGB values.
 
+        //Modular arithmetic and weighting curve application
+        const bool isInBlueMosaic = (pFilm.x % 2 == 0) && (pFilm.y % 2 == 0);
+        const bool isInRedMosaic = (pFilm.x % 2 == 1) && (pFilm.y % 2 == 1);
+        const bool isInGreenMosaic = (pFilm.x % 2) != (pFilm.y % 2); //Grün ist eine exclusive XOR Schaltung
+
+        // Apply general per-pixel spectral response
+        if (isInRedMosaic) {
+            ApplySpectralResponse(L, lambda,
+                                C60D_SSF_BANDS,
+                                C60D_red_ssf,
+                                C60D_SSF_SAMPLES);
+        } else if (isInGreenMosaic) {
+            ApplySpectralResponse(L, lambda,
+                                C60D_SSF_BANDS,
+                                C60D_green_ssf,
+                                C60D_SSF_SAMPLES);
+        } else if (isInBlueMosaic) {
+            ApplySpectralResponse(L, lambda,
+                                C60D_SSF_BANDS,
+                                C60D_blue_ssf,
+                                C60D_SSF_SAMPLES);
+        }
         // Convert sample radiance to _PixelSensor_ RGB
-        RGB rgb = sensor->ToSensorRGB(L, lambda);
+        RGB rgb = sensor->ToSensorRGB(L, lambda); 
 
         // Optionally clamp sensor RGB value
         Float m = std::max({rgb.r, rgb.g, rgb.b});
@@ -555,32 +660,23 @@ class ColorFilterArrayFilm : public FilmBase {
         DCHECK(InsideExclusive(pFilm, pixelBounds));
         // Update RGB fields in Pixel structure.
         Pixel &pixel = pixels[pFilm];
-        for (int c = 0; c < 3; ++c)
-            pixel.rgbSum[c] += weight * rgb[c];
-        pixel.rgbWeightSum += weight;
+        Float outR = 0, outG = 0, outB = 0;
 
-        // Spectral processing starts here.
-        // Optionally clamp spectral value. (TODO: for spectral should we
-        // just clamp channels individually?)
-        Float lm = L.MaxComponentValue();
-        if (lm > maxComponentValue)
-            L *= maxComponentValue / lm;
-
-        // The CIE_Y_integral factor effectively cancels out the effect of
-        // the conversion of light sources to use photometric units for
-        // specification.  We then do *not* divide by the PDF in |lambda|
-        // but take advantage of the fact that we know that it is uniform
-        // in SampleWavelengths(), the fact that the buckets all have the
-        // same extend, and can then just average radiance in buckets
-        // below.
-        L *= weight * CIE_Y_integral;
-
-        // Accumulate contributions in spectral buckets.
-        for (int i = 0; i < NSpectrumSamples; ++i) {
-            int b = LambdaToBucket(lambda[i]);
-            pixel.bucketSums[b] += L[i];
-            pixel.weightSums[b] += weight;
+        if (isInRedMosaic) {
+            outR = rgb.r;          // red pixel
         }
+        if (isInGreenMosaic) {
+            outG = rgb.g;          // green pixel
+        }
+        if (isInBlueMosaic) {
+            outB = rgb.b;          // blue pixel
+        }
+
+        // Accumulate only that one channel
+        pixel.rgbSum[0] += weight * outR;
+        pixel.rgbSum[1] += weight * outG;
+        pixel.rgbSum[2] += weight * outB;
+        pixel.weightSum += weight;
     }
 
     PBRT_CPU_GPU
