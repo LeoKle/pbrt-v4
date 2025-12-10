@@ -71,6 +71,42 @@ static constexpr float QE_BANDS[QE_SAMPLES] = {
     700.f
 };
 
+static constexpr float QE_MONO[QE_SAMPLES] = {
+    0.667213306f, 0.670149144f, 0.673084983f, 0.676020821f, 0.678956659f, 0.681892498f, 0.684828336f, 0.687764174f, 0.690700012f, 0.693412217f,
+    0.696046944f, 0.698681670f, 0.701316397f, 0.703951124f, 0.706585850f, 0.709220577f, 0.711855304f, 0.714435799f, 0.716843534f, 0.719251269f,
+    0.721659004f, 0.724066738f, 0.726474473f, 0.728882208f, 0.731242374f, 0.733535455f, 0.735828536f, 0.738121616f, 0.740414697f, 0.742707778f,
+    0.745000859f, 0.747293940f, 0.749587020f, 0.751880101f, 0.754117481f, 0.756345889f, 0.758574296f, 0.760802703f, 0.763031111f, 0.765259518f,
+    0.767487925f, 0.769716333f, 0.771907514f, 0.773883559f, 0.775859604f, 0.777835649f, 0.779811694f, 0.781787739f, 0.783763784f, 0.785739829f,
+    0.787460631f, 0.789003027f, 0.790545423f, 0.792087819f, 0.793630215f, 0.795172612f, 0.796715008f, 0.797840123f, 0.798769398f, 0.799698673f,
+    0.800627948f, 0.801557224f, 0.802486499f, 0.803818499f, 0.805612961f, 0.807407424f, 0.809201886f, 0.810996349f, 0.812790811f, 0.814585274f,
+    0.816379736f, 0.817282721f, 0.817797412f, 0.818312103f, 0.818826794f, 0.819341485f, 0.819856175f, 0.820370866f, 0.820885557f, 0.821400248f,
+    0.821914939f, 0.822550251f, 0.823288605f, 0.824026960f, 0.824765314f, 0.825503669f, 0.826242023f, 0.826980378f, 0.827718732f, 0.828457087f,
+    0.829195441f, 0.829933796f, 0.830672151f, 0.831410505f, 0.831860951f, 0.831860951f, 0.831860951f, 0.831860951f, 0.831860951f, 0.831860951f,
+    0.831860951f, 0.831860951f, 0.831860951f, 0.831860951f, 0.831860951f, 0.831860951f, 0.831860951f, 0.831860951f, 0.831860951f, 0.831860951f,
+    0.831079774f, 0.830263622f, 0.829447469f, 0.828631316f, 0.827815164f, 0.826999011f, 0.826182859f, 0.825366706f, 0.824550554f, 0.823734401f,
+    0.822918249f, 0.822102096f, 0.821285944f, 0.820570265f, 0.819996753f, 0.819423240f, 0.818849727f, 0.818276215f, 0.817702702f, 0.817129190f,
+    0.816180939f, 0.815024230f, 0.813867520f, 0.812710811f, 0.811554102f, 0.810397393f, 0.809260506f, 0.808210379f, 0.807160252f, 0.806110126f,
+    0.805059999f, 0.804009872f, 0.802959745f, 0.801651246f, 0.800309793f, 0.798968341f, 0.797626889f, 0.796285437f, 0.794943984f, 0.793602532f,
+    0.792263491f, 0.791107259f, 0.789951028f, 0.788794797f, 0.787638566f, 0.786482334f, 0.785326103f, 0.784169872f, 0.782703590f, 0.780754614f,
+    0.778805638f, 0.776856662f, 0.774907687f, 0.772958711f, 0.771009735f, 0.769060759f, 0.767111783f, 0.765157682f, 0.763182347f, 0.761207011f,
+    0.759231676f, 0.757256340f, 0.755281005f, 0.753305669f, 0.751330334f, 0.749354998f, 0.747354387f, 0.745319287f, 0.743284188f, 0.741249089f,
+    0.739213990f, 0.737178890f, 0.735143791f, 0.732800393f, 0.730226939f, 0.727653485f, 0.725080031f, 0.722506577f, 0.719933123f, 0.717359669f,
+    0.715029553f, 0.712759839f, 0.710490125f, 0.708220411f, 0.705950697f, 0.703680983f, 0.701411268f, 0.699141554f, 0.696871840f, 0.694602126f,
+    0.692332412f, 0.690062698f, 0.687718195f, 0.685197034f, 0.682675873f, 0.680154712f, 0.677633552f, 0.675112391f, 0.672591230f, 0.670070069f,
+    0.667548908f, 0.665027747f, 0.662506586f, 0.659933731f, 0.657259177f, 0.654584624f, 0.651910070f, 0.649235516f, 0.646560962f, 0.643886408f,
+    0.641211854f, 0.638537300f, 0.635867100f, 0.633206669f, 0.630546237f, 0.627885806f, 0.625225375f, 0.622564943f, 0.619904512f, 0.617244081f,
+    0.614583649f, 0.612007957f, 0.609468661f, 0.606929365f, 0.604390070f, 0.601850774f, 0.599311479f, 0.596772183f, 0.594232887f, 0.591693592f,
+    0.589154296f, 0.586615000f, 0.584075705f, 0.581536409f, 0.578997114f, 0.576457818f, 0.573918522f, 0.571369175f, 0.568815517f, 0.566261859f,
+    0.563708201f, 0.561154543f, 0.558600885f, 0.556047226f, 0.553493568f, 0.550939910f, 0.548386252f, 0.545991876f, 0.543620622f, 0.541249368f,
+    0.538878114f, 0.536506860f, 0.534135606f, 0.531764352f, 0.529393098f, 0.527021844f, 0.525195948f, 0.524109123f, 0.523022299f, 0.521935474f,
+    0.520848649f, 0.519761824f, 0.518675000f, 0.517588175f, 0.514762226f, 0.511666422f, 0.508570618f, 0.505474814f, 0.502379010f, 0.499283206f,
+    0.496187403f, 0.493091599f, 0.489995795f, 0.486899991f, 0.483804187f, 0.480708383f, 0.477612579f, 0.474516776f, 0.471420972f, 0.468325168f,
+    0.465229364f, 0.000000000f, 0.000000000f, 0.000000000f, 0.000000000f, 0.000000000f, 0.000000000f, 0.000000000f, 0.000000000f, 0.000000000f,
+    0.000000000f, 0.000000000f, 0.000000000f, 0.000000000f, 0.000000000f, 0.000000000f, 0.000000000f, 0.000000000f, 0.000000000f, 0.000000000f,
+    0.000000000f, 0.000000000f, 0.000000000f, 0.000000000f, 0.000000000f, 0.000000000f, 0.000000000f, 0.000000000f, 0.000000000f, 0.000000000f,
+    0.000000000f
+};
+
 static constexpr float QE_RED[QE_SAMPLES] = {
     // values from QE_red.csv
       0.112942066f, 0.111055804f, 0.109169542f, 0.107283279f, 0.105397017f, 0.103510755f, 0.101624492f, 0.099738230f, 0.097851968f, 0.095839004f,
@@ -808,26 +844,48 @@ class ColorFilterArrayFilm : public FilmBase {
         // Start by doing more or less what RGBFilm::AddSample() does so
         // that we can maintain accurate RGB values.
 
-        //Modular arithmetic and weighting curve application
-        const bool isInBlueMosaic = (pFilm.x % 2 == 0) && (pFilm.y % 2 == 0);
-        const bool isInRedMosaic = (pFilm.x % 2 == 1) && (pFilm.y % 2 == 1);
-        const bool isInGreenMosaic = (pFilm.x % 2) != (pFilm.y % 2); //Grün ist eine exclusive XOR Schaltung
+        //Modular arithmetic and weighting curve application CMY
+        //const bool isInBlueMosaic = (pFilm.x % 2 == 0) && (pFilm.y % 2 == 0);
+        //const bool isInRedMosaic = (pFilm.x % 2 == 1) && (pFilm.y % 2 == 1);
+        //const bool isInGreenMosaic = (pFilm.x % 2) != (pFilm.y % 2); //Grün ist eine exclusive XOR Schaltung
 
         // Apply per-pixel spectral response using QE curves
-        if (isInRedMosaic) {
+        //if (isInRedMosaic) {
+        //    ApplySpectralResponse(L, lambda,
+        //                        QE_BANDS,
+        //                        QE_MAGENTA,
+        //                        QE_SAMPLES);
+        //} else if (isInGreenMosaic) {
+        //    ApplySpectralResponse(L, lambda,
+        //                        QE_BANDS,
+        //                        QE_YELLOW,
+        //                        QE_SAMPLES);
+        //} else if (isInBlueMosaic) {
+        //    ApplySpectralResponse(L, lambda,
+        //                        QE_BANDS,
+        //                        QE_CYAN,
+        //                        QE_SAMPLES);
+        //}
+
+        // RCCC modular arithmetic and weighting curve application
+        // 2x2 tile in film space:
+        //   (0,0) R   (1,0) C
+        //   (0,1) C   (1,1) C
+        const bool isRed  = (pFilm.x % 2 == 0) && (pFilm.y % 2 == 0);
+        const bool isMono = !isRed;
+
+        // Apply per-pixel spectral response using QE curves
+        if (isRed) {
+            // Red site: use red QE
             ApplySpectralResponse(L, lambda,
                                 QE_BANDS,
-                                QE_MAGENTA,
+                                QE_RED,
                                 QE_SAMPLES);
-        } else if (isInGreenMosaic) {
+        } else {
+            // Clear “C” sites: panchromatic (mono) QE
             ApplySpectralResponse(L, lambda,
                                 QE_BANDS,
-                                QE_YELLOW,
-                                QE_SAMPLES);
-        } else if (isInBlueMosaic) {
-            ApplySpectralResponse(L, lambda,
-                                QE_BANDS,
-                                QE_CYAN,
+                                QE_MONO,
                                 QE_SAMPLES);
         }
 
@@ -846,17 +904,41 @@ class ColorFilterArrayFilm : public FilmBase {
         // Collapse to a single scalar CFA measurement.
         Float cfaSample = rgb.r + rgb.g + rgb.b;
 
-        // Encode mosaic pattern by channel index only (not by color meaning)
-        if (isInRedMosaic) {
-            pixel.rgbSum[0] += weight * cfaSample;
-        } else if (isInGreenMosaic) {
-            pixel.rgbSum[1] += weight * cfaSample;
-        } else if (isInBlueMosaic) {
-            pixel.rgbSum[2] += weight * cfaSample;
+        Float dispR = 0, dispG = 0, dispB = 0;
+
+        // Change these alongside the ApplySpectralResponse args --- CMY
+        //if (isInRedMosaic) {
+        //    // Magenta
+        //    dispR = 1; dispB = 1;
+        //} else if (isInGreenMosaic) {
+        //    // Yellow
+        //    dispR = 1; dispG = 1;
+        //} else if (isInBlueMosaic) {
+        //    // Cyan
+        //    dispG = 1; dispB = 1;
+        //}
+
+
+        // Visualization for RCCC:
+        //  - R sites show up red
+        //  - C sites show up white (all three channels)
+        if (isRed) {
+            dispR = 1.f;
+            dispG = 0.f;
+            dispB = 0.f;
+        } else { // mono
+            dispR = 1.f;
+            dispG = 1.f;
+            dispB = 1.f;
         }
 
+        // Accumulate into RGB channels according to chosen display color
+        pixel.rgbSum[0] += weight * cfaSample * dispR;
+        pixel.rgbSum[1] += weight * cfaSample * dispG;
+        pixel.rgbSum[2] += weight * cfaSample * dispB;
 
         pixel.rgbWeightSum += weight;
+
     }
 
     PBRT_CPU_GPU

@@ -1076,8 +1076,12 @@ ColorFilterArrayFilm::ColorFilterArrayFilm(FilmBaseParameters p, Float lambdaMin
       maxComponentValue(maxComponentValue),
       writeFP16(writeFP16),
       pixels(p.pixelBounds, alloc) {
-    // Compute _outputRGBFromSensorRGB_ matrix
-    outputRGBFromSensorRGB = colorSpace->RGBFromXYZ * sensor->XYZFromSensorRGB;
+
+    //No extra RGB transform for CFA (multiplication with identity)
+    outputRGBFromSensorRGB =
+        SquareMatrix<3>(1.f, 0.f, 0.f,
+                        0.f, 1.f, 0.f,
+                        0.f, 0.f, 1.f);
 
     filterIntegral = filter.Integral();
     CHECK(!pixelBounds.IsEmpty());
@@ -1125,7 +1129,8 @@ PBRT_CPU_GPU RGB ColorFilterArrayFilm::GetPixelRGB(Point2i p, Float splatScale) 
     return rgb;
 }
 
-PBRT_CPU_GPU void ColorFilterArrayFilm::AddSplat(Point2f p, SampledSpectrum L,
+PBRT_CPU_GPU 
+void ColorFilterArrayFilm::AddSplat(Point2f p, SampledSpectrum L,
                             const SampledWavelengths &lambda) {
     // This, too, is similar to RGBFilm::AddSplat(), with additions for
     // spectra.
@@ -1153,15 +1158,58 @@ PBRT_CPU_GPU void ColorFilterArrayFilm::AddSplat(Point2f p, SampledSpectrum L,
                          Point2i(Floor(pDiscrete + radius)) + Vector2i(1, 1));
     splatBounds = Intersect(splatBounds, pixelBounds);
 
-    // Splat both RGB and spectral bucket contributions.
+    // Splat both RGB (for display) and spectral bucket contributions.
     for (Point2i pi : splatBounds) {
         // Evaluate filter at _pi_ and add splat contribution
         Float wt = filter.Evaluate(Point2f(p - pi - Vector2f(0.5, 0.5)));
         if (wt != 0) {
             Pixel &pixel = pixels[pi];
 
-            for (int i = 0; i < 3; ++i)
-                pixel.rgbSplat[i].Add(wt * rgb[i]);
+            // Determine which CFA site this pixel is ---CMY
+            //bool isInBlueMosaic  = (pi.x % 2 == 0) && (pi.y % 2 == 0);
+            //bool isInRedMosaic   = (pi.x % 2 == 1) && (pi.y % 2 == 1);
+            //bool isInGreenMosaic = (pi.x % 2) != (pi.y % 2);
+
+            // Same CMY display mapping as in AddSample()
+            //Float dispR = 0, dispG = 0, dispB = 0;
+            //if (isInRedMosaic) {
+            //    // Magenta
+            //    dispR = 1; dispB = 1;
+            //} else if (isInGreenMosaic) {
+            //    // Yellow
+            //    dispR = 1; dispG = 1;
+            //} else if (isInBlueMosaic) {
+            //    // Cyan
+            //    dispG = 1; dispB = 1;
+            //}
+
+            // Determine which CFA site this pixel is (RCCC pattern)
+            // 2x2 tile:
+            //   (0,0) R   (1,0) C
+            //   (0,1) C   (1,1) C
+            bool isRed  = (pi.x % 2 == 0) && (pi.y % 2 == 0);
+            bool isMono = !isRed;
+
+            // Same visualization as in AddSample()
+            Float dispR = 0, dispG = 0, dispB = 0;
+            if (isRed) {
+                // Red sites drawn red
+                dispR = 1.f;
+                dispG = 0.f;
+                dispB = 0.f;
+            } else {
+                // Clear sites drawn white
+                dispR = 1.f;
+                dispG = 1.f;
+                dispB = 1.f;
+            }
+
+            // Use overall brightness as CFA measurement
+            Float cfaSample = rgb.r + rgb.g + rgb.b;
+
+            pixel.rgbSplat[0].Add(wt * cfaSample * dispR);
+            pixel.rgbSplat[1].Add(wt * cfaSample * dispG);
+            pixel.rgbSplat[2].Add(wt * cfaSample * dispB);
 
             for (int i = 0; i < NSpectrumSamples; ++i) {
                 int b = LambdaToBucket(lambda[i]);
