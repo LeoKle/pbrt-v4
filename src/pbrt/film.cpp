@@ -1153,14 +1153,6 @@ PBRT_CPU_GPU void ColorFilterArrayFilm::AddSplat(Point2f p, SampledSpectrum L,
 
     CHECK(!L.HasNaNs());
 
-    // Convert sample radiance to _PixelSensor_ RGB
-    RGB rgb = sensor->ToSensorRGB(L, lambda);
-
-    // Optionally clamp sensor RGB value
-    Float m = std::max({rgb.r, rgb.g, rgb.b});
-    if (m > maxComponentValue)
-        rgb *= maxComponentValue / m;
-
     // Spectral clamping and normalization.
     Float lm = L.MaxComponentValue();
     if (lm > maxComponentValue)
@@ -1178,16 +1170,26 @@ PBRT_CPU_GPU void ColorFilterArrayFilm::AddSplat(Point2f p, SampledSpectrum L,
     for (Point2i pi : splatBounds) {
         // Evaluate filter at _pi_ and add splat contribution
         Float wt = filter.Evaluate(Point2f(p - pi - Vector2f(0.5, 0.5)));
-        if (wt != 0) {
-            Pixel &pixel = pixels[pi];
+        if (wt == 0) continue;
 
-            for (int i = 0; i < 3; ++i)
-                pixel.rgbSplat[i].Add(wt * rgb[i]);
+        Pixel &pixel = pixels[pi];
+        const auto mosaic_type = this->GetMosaicType(pi.x, pi.y);
 
-            for (int i = 0; i < NSpectrumSamples; ++i) {
-                int b = LambdaToBucket(lambda[i]);
-                pixel.bucketSplats[b].Add(wt * L[i]);
-            }
+        SampledSpectrum Lf = L;
+        for (int i = 0; i < NSpectrumSamples; ++i)
+            Lf[i] *= SampleMosaicQE(mosaic_type, lambda[i]);
+
+        RGB rgb = sensor->ToSensorRGB(Lf, lambda);
+        Float m = std::max({rgb.r, rgb.g, rgb.b});
+        if (m > maxComponentValue)
+            rgb *= maxComponentValue / m;
+
+        for (int i = 0; i < 3; ++i)
+            pixel.rgbSplat[i].Add(wt * rgb[i]);
+
+        for (int i = 0; i < NSpectrumSamples; ++i) {
+            int b = LambdaToBucket(lambda[i]);
+            pixel.bucketSplats[b].Add(wt * Lf[i]);
         }
     }
 }

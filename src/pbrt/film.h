@@ -542,6 +542,14 @@ class ColorFilterArrayFilm : public FilmBase {
     PBRT_CPU_GPU
     void AddSample(Point2i pFilm, SampledSpectrum L, const SampledWavelengths &lambda,
                    const VisibleSurface *, Float weight) {
+        
+        const auto mosaic_type = this->GetMosaicType(pFilm.x, pFilm.y);
+        for (int i = 0; i < NSpectrumSamples; i++) {
+            const auto wavelength = lambda[i];
+
+            L[i] *= SampleMosaicQE(mosaic_type, wavelength);
+        }
+
         // Start by doing more or less what RGBFilm::AddSample() does so
         // that we can maintain accurate RGB values.
 
