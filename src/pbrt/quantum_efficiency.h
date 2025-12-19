@@ -1,6 +1,8 @@
 #ifndef QE_H
 #define QE_H
 
+#include <pbrt/util/error.h>
+
 // Quantum efficiency curves for CMOS colors (RGB + CMY)
 // Data imported from QE_*.csv (wavelength in nm, QE in [0,1])
 
@@ -380,6 +382,21 @@ PBRT_CPU_GPU inline Float SampleMosaicQE(
     const SpectralCurve& c = GetQECurve(mosaic);
     return SampleSpectralCurve(c.bands, c.values, c.n, lambda);
 }
+
+PBRT_CPU_GPU
+inline MosaicType CharToMosaic(char c) {
+    switch (c) {
+    case 'R': return MosaicType::R;
+    case 'G': return MosaicType::G;
+    case 'B': return MosaicType::B;
+    case 'C': return MosaicType::C;
+    case 'Y': return MosaicType::Y;
+    case 'M': return MosaicType::M;
+    default:
+        Warning("Unknown CFA pattern character '%c'", c);
+        return MosaicType::MONO;
+    }
+};
 }
 
 #endif

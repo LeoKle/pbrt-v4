@@ -15,6 +15,7 @@
 #include <pbrt/base/camera.h>
 #include <pbrt/base/film.h>
 #include <pbrt/bsdf.h>
+#include <pbrt/quantum_efficiency.h>
 #include <pbrt/util/color.h>
 #include <pbrt/util/colorspace.h>
 #include <pbrt/util/parallel.h>
@@ -588,7 +589,8 @@ class ColorFilterArrayFilm : public FilmBase {
 
     ColorFilterArrayFilm(FilmBaseParameters p, Float lambdaMin, Float lambdaMax, int nBuckets,
                  const RGBColorSpace *colorSpace, Float maxComponentValue = Infinity,
-                 bool writeFP16 = true, Allocator alloc = {});
+                 bool writeFP16 = true, Allocator alloc = {},
+                 int patternWidth=2, int patternHeight=2, const std::string& pattern = "RGGB");
 
     static ColorFilterArrayFilm *Create(const ParameterDictionary &parameters, Float exposureTime,
                                 Filter filter, const RGBColorSpace *colorSpace,
@@ -624,6 +626,19 @@ class ColorFilterArrayFilm : public FilmBase {
         memset(pix.bucketSplats, 0, nBuckets * sizeof(AtomicDouble));
     }
 
+    PBRT_CPU_GPU
+    inline MosaicType GetMosaicType(int x, int y) const {
+        // convert absolute coords to coords on CFA pattern
+        int px = (x - pixelBounds.pMin.x) % patternWidth;
+        int py = (y - pixelBounds.pMin.y) % patternHeight;
+
+        
+        if (px < 0) px += patternWidth;
+        if (py < 0) py += patternHeight;
+
+        return cfaPattern[py * patternWidth + px];
+    }
+
   private:
     PBRT_CPU_GPU
     int LambdaToBucket(Float lambda) const {
@@ -654,6 +669,9 @@ class ColorFilterArrayFilm : public FilmBase {
     Float filterIntegral;
     Array2D<Pixel> pixels;
     SquareMatrix<3> outputRGBFromSensorRGB;
+
+    int patternWidth, patternHeight;
+    std::vector<MosaicType> cfaPattern;
 };
 
 PBRT_CPU_GPU

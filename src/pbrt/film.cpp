@@ -1067,7 +1067,8 @@ SpectralFilm *SpectralFilm::Create(const ParameterDictionary &parameters,
 // ColorFilterArrayFilm Method Definitions
 ColorFilterArrayFilm::ColorFilterArrayFilm(FilmBaseParameters p, Float lambdaMin, Float lambdaMax,
                            int nBuckets, const RGBColorSpace *colorSpace,
-                           Float maxComponentValue, bool writeFP16, Allocator alloc)
+                           Float maxComponentValue, bool writeFP16, Allocator alloc, 
+                           int patternWidth, int patternHeight, const std::string& pattern)
     : FilmBase(p),
       colorSpace(colorSpace),
       lambdaMin(lambdaMin),
@@ -1075,9 +1076,29 @@ ColorFilterArrayFilm::ColorFilterArrayFilm(FilmBaseParameters p, Float lambdaMin
       nBuckets(nBuckets),
       maxComponentValue(maxComponentValue),
       writeFP16(writeFP16),
-      pixels(p.pixelBounds, alloc) {
-    // Compute _outputRGBFromSensorRGB_ matrix
-    outputRGBFromSensorRGB = colorSpace->RGBFromXYZ * sensor->XYZFromSensorRGB;
+      pixels(p.pixelBounds, alloc),
+      patternWidth(patternWidth),
+      patternHeight(patternHeight) {
+    // SETUP CFA PATTERN
+    if ((int)pattern.size() != patternWidth * patternHeight) {
+        ErrorExit("CFA pattern size mismatch: expected %d chars, got %d",
+              patternWidth * patternHeight, int(pattern.size()));
+        return;
+    }
+
+    cfaPattern.resize(patternWidth * patternHeight);
+    for (int y = 0; y < patternHeight; ++y) {
+        for (int x = 0; x < patternWidth; ++x) {
+            char c = pattern[y * patternWidth + x];
+            cfaPattern[y * patternWidth + x] = CharToMosaic(c);
+        }
+    }
+
+    // No extra RGB transform for CFA (multiplication with identity)
+    outputRGBFromSensorRGB =
+        SquareMatrix<3>(1.f, 0.f, 0.f,
+                        0.f, 1.f, 0.f,
+                        0.f, 0.f, 1.f);
 
     filterIntegral = filter.Integral();
     CHECK(!pixelBounds.IsEmpty());
@@ -1257,6 +1278,10 @@ ColorFilterArrayFilm *ColorFilterArrayFilm::Create(const ParameterDictionary &pa
                                    Float exposureTime, Filter filter,
                                    const RGBColorSpace *colorSpace, const FileLoc *loc,
                                    Allocator alloc) {
+    const int patternWidth = parameters.GetOneInt("pattern_width", 2);
+    const int patternHeight = parameters.GetOneInt("pattern_height", 2);
+    const std::string pattern = parameters.GetOneString("pattern", "RGGB");
+
     PixelSensor *sensor =
         PixelSensor::Create(parameters, colorSpace, exposureTime, loc, alloc);
     FilmBaseParameters filmBaseParameters(parameters, filter, sensor, loc);
@@ -1280,7 +1305,7 @@ ColorFilterArrayFilm *ColorFilterArrayFilm::Create(const ParameterDictionary &pa
 
     return alloc.new_object<ColorFilterArrayFilm>(filmBaseParameters, lambdaMin, lambdaMax,
                                           nBuckets, colorSpace, maxComponentValue,
-                                          writeFP16, alloc);
+                                          writeFP16, alloc, patternWidth, patternHeight, pattern);
 }
 
 Film Film::Create(const std::string &name, const ParameterDictionary &parameters,
