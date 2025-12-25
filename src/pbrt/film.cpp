@@ -1104,26 +1104,6 @@ ColorFilterArrayFilm::ColorFilterArrayFilm(FilmBaseParameters p, Float lambdaMin
     CHECK(!pixelBounds.IsEmpty());
     filmPixelMemory +=
         pixelBounds.Area() * (sizeof(Pixel) + 3 * nBuckets * sizeof(double));
-
-    // Allocate memory for the pixel buffers in big arrays. Note that it's
-    // wasteful (but convenient) to be storing three pointers in each
-    // ColorFilterArrayFilm::Pixel structure since the addresses could be computed
-    // based on the base pointers and pixel coordinates.
-    int nPixels = pixelBounds.Area();
-    double *bucketWeightBuffer = alloc.allocate_object<double>(2 * nBuckets * nPixels);
-    std::memset(bucketWeightBuffer, 0, 2 * nBuckets * nPixels * sizeof(double));
-    AtomicDouble *splatBuffer = alloc.allocate_object<AtomicDouble>(nBuckets * nPixels);
-    std::memset(splatBuffer, 0, nBuckets * nPixels * sizeof(double));
-
-    for (Point2i p : pixelBounds) {
-        Pixel &pixel = pixels[p];
-        pixel.bucketSums = bucketWeightBuffer;
-        bucketWeightBuffer += nBuckets;
-        pixel.weightSums = bucketWeightBuffer;
-        bucketWeightBuffer += nBuckets;
-        pixel.bucketSplats = splatBuffer;
-        splatBuffer += nBuckets;
-    }
 }
 
 PBRT_CPU_GPU RGB ColorFilterArrayFilm::GetPixelRGB(Point2i p, Float splatScale) const {
@@ -1188,8 +1168,7 @@ PBRT_CPU_GPU void ColorFilterArrayFilm::AddSplat(Point2f p, SampledSpectrum L,
             pixel.rgbSplat[i].Add(wt * rgb[i]);
 
         for (int i = 0; i < NSpectrumSamples; ++i) {
-            int b = LambdaToBucket(lambda[i]);
-            pixel.bucketSplats[b].Add(wt * Lf[i]);
+            pixel.intensitySplat.Add(wt * Lf[i]);
         }
     }
 }
@@ -1205,24 +1184,16 @@ Image ColorFilterArrayFilm::GetImage(ImageMetadata *metadata, Float splatScale) 
     LOG_VERBOSE("Computing final weighted pixel values");
     PixelFormat format = writeFP16 ? PixelFormat::Half : PixelFormat::Float;
 
-    std::vector<std::string> imageChannels{{"R", "G", "B"}};
-    for (int i = 0; i < nBuckets; ++i) {
-        // The OpenEXR spectral layout takes the bucket center (and then
-        // determines bucket widths based on the neighbor wavelengths).
-        std::string lambda =
-            StringPrintf("%.3fnm", Lerp((i + 0.5f) / nBuckets, lambdaMin, lambdaMax));
-        // Convert any '.' to ',' in the number since OpenEXR uses '.' for
-        // separating layers.
-        std::replace(lambda.begin(), lambda.end(), '.', ',');
-
-        imageChannels.push_back("S0." + lambda);
-    }
+    std::vector<std::string> imageChannels{{"R", "G", "B", "I"}};
+    
     Image image(format, Point2i(pixelBounds.Diagonal()), imageChannels);
 
     std::atomic<int> nClamped{0};
     ParallelFor2D(pixelBounds, [&](Point2i p) {
         Pixel &pixel = pixels[p];
+        
 
+        // RGB:
         RGB rgb = GetPixelRGB(p, splatScale);
 
         // Clamp to max representable fp16 to avoid Infs
@@ -1235,23 +1206,20 @@ Image ColorFilterArrayFilm::GetImage(ImageMetadata *metadata, Float splatScale) 
             }
         }
 
-        Point2i pOffset(p.x - pixelBounds.pMin.x, p.y - pixelBounds.pMin.y);
-        image.SetChannels(pOffset, {rgb[0], rgb[1], rgb[2]});
-
-        // Set spectral channels. Hardcoded assuming that they come
-        // immediately after RGB, as is currently specified above.
-        for (int i = 0; i < nBuckets; ++i) {
-            Float c = 0;
-            if (pixel.weightSums[i] > 0) {
-                c = pixel.bucketSums[i] / pixel.weightSums[i] +
-                    splatScale * pixel.bucketSplats[i] / filterIntegral;
-                if (writeFP16 && c > 65504) {
-                    c = 65504;
-                    ++nClamped;
-                }
+        // RAW
+        Float intensity = 0.f;
+        if (pixel.weightSums > 0) {
+            intensity = pixel.intensity / pixel.weightSums + splatScale * pixel.intensitySplat / filterIntegral;
+            if (writeFP16 && intensity > 65504) {
+                intensity = 65504;
+                ++nClamped;
             }
-            image.SetChannel(pOffset, 3 + i, c);
         }
+
+        Point2i pOffset(p.x - pixelBounds.pMin.x,
+                        p.y - pixelBounds.pMin.y);
+
+        image.SetChannels(pOffset, {rgb[0], rgb[1], rgb[2], intensity});
     });
 
     if (nClamped.load() > 0)
@@ -1293,7 +1261,7 @@ ColorFilterArrayFilm *ColorFilterArrayFilm::Create(const ParameterDictionary &pa
         ErrorExit(loc, "%s: EXR is the only output format supported by the ColorFilterArrayFilm.",
                   filmBaseParameters.filename);
 
-    int nBuckets = parameters.GetOneInt("nbuckets", 16);
+    int nBuckets = 1;
     Float lambdaMin = parameters.GetOneFloat("lambdamin", Lambda_min);
     Float lambdaMax = parameters.GetOneFloat("lambdamax", Lambda_max);
     if (lambdaMin < Lambda_min || lambdaMax > Lambda_max)

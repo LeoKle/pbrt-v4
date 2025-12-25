@@ -550,9 +550,7 @@ class ColorFilterArrayFilm : public FilmBase {
             L[i] *= SampleMosaicQE(mosaic_type, wavelength);
         }
 
-        // Start by doing more or less what RGBFilm::AddSample() does so
-        // that we can maintain accurate RGB values.
-
+        // from RGBFilm::AddSample()
         // Convert sample radiance to _PixelSensor_ RGB
         RGB rgb = sensor->ToSensorRGB(L, lambda);
 
@@ -567,28 +565,20 @@ class ColorFilterArrayFilm : public FilmBase {
         for (int c = 0; c < 3; ++c)
             pixel.rgbSum[c] += weight * rgb[c];
         pixel.rgbWeightSum += weight;
+        // RGBFilm::AddSample() ends here
 
-        // Spectral processing starts here.
-        // Optionally clamp spectral value. (TODO: for spectral should we
-        // just clamp channels individually?)
+        // process raw sensor response:
         Float lm = L.MaxComponentValue();
         if (lm > maxComponentValue)
             L *= maxComponentValue / lm;
 
-        // The CIE_Y_integral factor effectively cancels out the effect of
-        // the conversion of light sources to use photometric units for
-        // specification.  We then do *not* divide by the PDF in |lambda|
-        // but take advantage of the fact that we know that it is uniform
-        // in SampleWavelengths(), the fact that the buckets all have the
-        // same extend, and can then just average radiance in buckets
-        // below.
+        // same as in SpectralFilm::AddSample
+        // multiply with the CIE_Y_integral factor to cancel out the effect of the conversion of light sources to use photometric units for specification
         L *= weight * CIE_Y_integral;
 
-        // Accumulate contributions in spectral buckets.
         for (int i = 0; i < NSpectrumSamples; ++i) {
-            int b = LambdaToBucket(lambda[i]);
-            pixel.bucketSums[b] += L[i];
-            pixel.weightSums[b] += weight;
+            pixel.intensity += L[i];
+            pixel.weightSums += weight;
         }
     }
 
@@ -629,9 +619,10 @@ class ColorFilterArrayFilm : public FilmBase {
         pix.rgbSum[0] = pix.rgbSum[1] = pix.rgbSum[2] = 0.;
         pix.rgbWeightSum = 0.;
         pix.rgbSplat[0] = pix.rgbSplat[1] = pix.rgbSplat[2] = 0.;
-        memset(pix.bucketSums, 0, nBuckets * sizeof(double));
-        memset(pix.weightSums, 0, nBuckets * sizeof(double));
-        memset(pix.bucketSplats, 0, nBuckets * sizeof(AtomicDouble));
+        
+        pix.intensity = 0.;
+        pix.weightSums = 0.;
+        pix.intensitySplat = 0.;
     }
 
     PBRT_CPU_GPU
@@ -648,13 +639,6 @@ class ColorFilterArrayFilm : public FilmBase {
     }
 
   private:
-    PBRT_CPU_GPU
-    int LambdaToBucket(Float lambda) const {
-        DCHECK_RARE(1e6f, lambda < lambdaMin || lambda > lambdaMax);
-        int bucket = nBuckets * (lambda - lambdaMin) / (lambdaMax - lambdaMin);
-        return Clamp(bucket, 0, nBuckets - 1);
-    }
-
     // ColorFilterArrayFilm::Pixel Definition
     struct Pixel {
         Pixel() = default;
@@ -663,9 +647,10 @@ class ColorFilterArrayFilm : public FilmBase {
         double rgbSum[3] = {0., 0., 0.};
         double rgbWeightSum = 0.;
         AtomicDouble rgbSplat[3];
-        // The following will all have nBuckets entries.
-        double *bucketSums, *weightSums;
-        AtomicDouble *bucketSplats;
+
+        double intensity = 0.;
+        double weightSums = 0.;
+        AtomicDouble intensitySplat;
     };
 
     // ColorFilterArrayFilm Private Members
