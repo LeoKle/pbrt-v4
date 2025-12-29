@@ -126,3 +126,61 @@ TEST(CFAFilm, CYYM) {
 
     alloc.delete_object(film);
 }
+
+struct CFATestCase {
+    int width;
+    int height;
+    std::string pattern;
+};
+
+class CFAFilmParameterizedTest : public ::testing::TestWithParam<CFATestCase> {};
+
+TEST_P(CFAFilmParameterizedTest, ArbitraryPatternTiling) {
+    const auto &tc = GetParam();
+    const auto params = createParameterDictionary(tc.width, tc.height, tc.pattern);
+
+    Float exposure = 1.0f;
+    Filter filter = new BoxFilter(Vector2f(0.5, 0.5));
+    const RGBColorSpace *cs = RGBColorSpace::sRGB;
+    FileLoc loc;
+    Allocator alloc;
+
+    ColorFilterArrayFilm *film =
+        ColorFilterArrayFilm::Create(params, exposure, filter, cs, &loc, alloc);
+
+    ASSERT_NE(film, nullptr);
+
+    // verify pattern correctness in multiple repetitions of the pattern
+    for (int y = 0; y < tc.height * 3; ++y) {
+        for (int x = 0; x < tc.width * 3; ++x) {
+            int px = x % tc.width;
+            int py = y % tc.height;
+            char expectedChar = tc.pattern[py * tc.width + px];
+
+            EXPECT_EQ(film->GetMosaicType(x, y), CharToMosaic(expectedChar));
+        }
+    }
+
+    alloc.delete_object(film);
+}
+
+INSTANTIATE_TEST_CASE_P(CFAFilmPatterns, CFAFilmParameterizedTest,
+                        ::testing::Values(CFATestCase{2, 2, "RGGB"},
+                                          CFATestCase{2, 2, "CYYM"},
+                                          CFATestCase{3, 2, "RGBRGB"},
+                                          CFATestCase{4, 1, "RGBG"},
+                                          CFATestCase{1, 4, "RGBG"}));
+
+TEST(CFAFilm, InvalidPatternCharacter) {
+    const auto params = createParameterDictionary(2, 2, "RGXG");
+
+    Float exposure = 1.0f;
+    Filter filter = new BoxFilter(Vector2f(0.5, 0.5));
+    const RGBColorSpace *cs = RGBColorSpace::sRGB;
+    FileLoc loc;
+    Allocator alloc;
+
+    ASSERT_DEATH(
+        { ColorFilterArrayFilm::Create(params, exposure, filter, cs, &loc, alloc); },
+        "Unknown CFA pattern character");
+}
