@@ -585,7 +585,7 @@ class ColorFilterArrayFilm : public FilmBase {
     PBRT_CPU_GPU
     RGB GetPixelRGB(Point2i p, Float splatScale = 1) const;
 
-    ColorFilterArrayFilm(FilmBaseParameters p, Float lambdaMin, Float lambdaMax, int nBuckets,
+    ColorFilterArrayFilm(FilmBaseParameters p, Float lambdaMin, Float lambdaMax,
                  const RGBColorSpace *colorSpace, Float maxComponentValue = Infinity,
                  bool writeFP16 = true, Allocator alloc = {},
                  int patternWidth=2, int patternHeight=2, const std::string& pattern = "RGGB");
@@ -656,7 +656,6 @@ class ColorFilterArrayFilm : public FilmBase {
     // ColorFilterArrayFilm Private Members
     const RGBColorSpace *colorSpace;
     Float lambdaMin, lambdaMax;
-    int nBuckets;
     Float maxComponentValue;
     bool writeFP16;
     Float filterIntegral;

@@ -1066,14 +1066,13 @@ SpectralFilm *SpectralFilm::Create(const ParameterDictionary &parameters,
 
 // ColorFilterArrayFilm Method Definitions
 ColorFilterArrayFilm::ColorFilterArrayFilm(FilmBaseParameters p, Float lambdaMin, Float lambdaMax,
-                           int nBuckets, const RGBColorSpace *colorSpace,
+                           const RGBColorSpace *colorSpace,
                            Float maxComponentValue, bool writeFP16, Allocator alloc, 
                            int patternWidth, int patternHeight, const std::string& pattern)
     : FilmBase(p),
       colorSpace(colorSpace),
       lambdaMin(lambdaMin),
       lambdaMax(lambdaMax),
-      nBuckets(nBuckets),
       maxComponentValue(maxComponentValue),
       writeFP16(writeFP16),
       pixels(p.pixelBounds, alloc),
@@ -1103,7 +1102,7 @@ ColorFilterArrayFilm::ColorFilterArrayFilm(FilmBaseParameters p, Float lambdaMin
     filterIntegral = filter.Integral();
     CHECK(!pixelBounds.IsEmpty());
     filmPixelMemory +=
-        pixelBounds.Area() * (sizeof(Pixel) + 3 * nBuckets * sizeof(double));
+        pixelBounds.Area() * (sizeof(Pixel));
 }
 
 PBRT_CPU_GPU RGB ColorFilterArrayFilm::GetPixelRGB(Point2i p, Float splatScale) const {
@@ -1238,9 +1237,9 @@ Image ColorFilterArrayFilm::GetImage(ImageMetadata *metadata, Float splatScale) 
 }
 
 std::string ColorFilterArrayFilm::ToString() const {
-    return StringPrintf("[ ColorFilterArrayFilm %s lambdaMin: %f lambdaMax: %f nBuckets: %d "
+    return StringPrintf("[ ColorFilterArrayFilm %s lambdaMin: %f lambdaMax: %f "
                         "writeFP16: %s maxComponentValue: %f ]",
-                        BaseToString(), lambdaMin, lambdaMax, nBuckets, writeFP16,
+                        BaseToString(), lambdaMin, lambdaMax, writeFP16,
                         maxComponentValue);
 }
 
@@ -1261,7 +1260,6 @@ ColorFilterArrayFilm *ColorFilterArrayFilm::Create(const ParameterDictionary &pa
         ErrorExit(loc, "%s: EXR is the only output format supported by the ColorFilterArrayFilm.",
                   filmBaseParameters.filename);
 
-    int nBuckets = 1;
     Float lambdaMin = parameters.GetOneFloat("lambdamin", Lambda_min);
     Float lambdaMax = parameters.GetOneFloat("lambdamax", Lambda_max);
     if (lambdaMin < Lambda_min || lambdaMax > Lambda_max)
@@ -1274,7 +1272,7 @@ ColorFilterArrayFilm *ColorFilterArrayFilm::Create(const ParameterDictionary &pa
     Float maxComponentValue = parameters.GetOneFloat("maxcomponentvalue", Infinity);
 
     return alloc.new_object<ColorFilterArrayFilm>(filmBaseParameters, lambdaMin, lambdaMax,
-                                          nBuckets, colorSpace, maxComponentValue,
+                                          colorSpace, maxComponentValue,
                                           writeFP16, alloc, patternWidth, patternHeight, pattern);
 }
 
