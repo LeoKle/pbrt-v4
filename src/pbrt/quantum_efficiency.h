@@ -392,6 +392,7 @@ inline MosaicType CharToMosaic(char c) {
     case 'C': return MosaicType::C;
     case 'Y': return MosaicType::Y;
     case 'M': return MosaicType::M;
+    case 'W': return MosaicType::MONO;
     default:
         ErrorExit("Unknown CFA pattern character '%c'", c);
         return MosaicType::MONO;
