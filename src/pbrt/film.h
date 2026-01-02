@@ -584,6 +584,7 @@ class ColorFilterArrayFilm : public FilmBase {
 
     PBRT_CPU_GPU
     RGB GetPixelRGB(Point2i p, Float splatScale = 1) const;
+    PBRT_CPU_GPU Float GetIntensity(Point2i p) const;
 
     ColorFilterArrayFilm(FilmBaseParameters p, Float lambdaMin, Float lambdaMax,
                  const RGBColorSpace *colorSpace, Float maxComponentValue = Infinity,
