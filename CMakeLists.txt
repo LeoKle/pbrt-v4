@@ -550,6 +550,7 @@ set (PBRT_SOURCE
   src/pbrt/pbrt.cpp
   src/pbrt/ray.cpp
   src/pbrt/samplers.cpp
+  src/pbrt/quantum_efficiency.cpp
   src/pbrt/scene.cpp
   src/pbrt/shapes.cpp
   src/pbrt/textures.cpp
@@ -1075,6 +1076,8 @@ set_property (TARGET cyhair2pbrt PROPERTY FOLDER "cmd")
 set (PBRT_TEST_SOURCE
   src/pbrt/bsdfs_test.cpp
   src/pbrt/filters_test.cpp
+  src/pbrt/quantum_efficiency.cpp
+  src/pbrt/film_render_test.cpp
   src/pbrt/film_test.cpp
   src/pbrt/lights_test.cpp
   src/pbrt/lightsamplers_test.cpp

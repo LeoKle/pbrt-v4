@@ -1125,6 +1125,14 @@ PBRT_CPU_GPU RGB ColorFilterArrayFilm::GetPixelRGB(Point2i p, Float splatScale) 
     return rgb;
 }
 
+PBRT_CPU_GPU Float ColorFilterArrayFilm::GetIntensity(Point2i p) const {
+    const Pixel &pixel = pixels[p];
+
+    if (pixel.weightSums == 0) return 0;
+
+    return pixel.intensity / pixel.weightSums;
+}
+
 PBRT_CPU_GPU void ColorFilterArrayFilm::AddSplat(Point2f p, SampledSpectrum L,
                             const SampledWavelengths &lambda) {
     // This, too, is similar to RGBFilm::AddSplat(), with additions for
