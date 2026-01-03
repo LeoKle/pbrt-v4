@@ -42,7 +42,7 @@ TEST_P(CFAFilmParameterizedTest, ArbitraryPatternTiling) {
             int py = y % tc.height;
             char expectedChar = tc.pattern[py * tc.width + px];
 
-            EXPECT_EQ(film->GetMosaicType(x, y), CharToMosaic(expectedChar));
+            EXPECT_EQ(film->GetMosaicType(x, y), CharToFilter(expectedChar));
         }
     }
 

@@ -1089,7 +1089,7 @@ ColorFilterArrayFilm::ColorFilterArrayFilm(FilmBaseParameters p, Float lambdaMin
     for (int y = 0; y < patternHeight; ++y) {
         for (int x = 0; x < patternWidth; ++x) {
             char c = pattern[y * patternWidth + x];
-            cfaPattern[y * patternWidth + x] = CharToMosaic(c);
+            cfaPattern[y * patternWidth + x] = CharToFilter(c);
         }
     }
 

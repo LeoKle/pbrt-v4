@@ -384,7 +384,7 @@ PBRT_CPU_GPU inline Float GetFilterQE(
 }
 
 PBRT_CPU_GPU
-inline FilterType CharToMosaic(char c) {
+inline FilterType CharToFilter(char c) {
     switch (c) {
     case 'R': return FilterType::R;
     case 'G': return FilterType::G;
