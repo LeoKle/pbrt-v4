@@ -54,3 +54,53 @@ TEST(QESamplingTest, Extrapolation) {
     Float above = GetFilterQE(m, curve.bands[curve.n - 1] + 10.f);
     EXPECT_GE(above, 0.f);
 }
+
+TEST(QESamplingTest, ExactSampleHit) {
+    Float lambda[] = {400.f, 500.f, 600.f};
+    Float values[] = {0.1f, 0.5f, 0.9f};
+
+    EXPECT_FLOAT_EQ(
+        LinearInterpolateSpectralCurve(lambda, values, 3, 400.f),
+        0.1f);
+
+    EXPECT_FLOAT_EQ(
+        LinearInterpolateSpectralCurve(lambda, values, 3, 500.f),
+        0.5f);
+
+    EXPECT_FLOAT_EQ(
+        LinearInterpolateSpectralCurve(lambda, values, 3, 600.f),
+        0.9f);
+}
+
+TEST(QESamplingTest, MidpointInterpolation) {
+    Float lambda[] = {400.f, 500.f};
+    Float values[] = {0.2f, 0.6f};
+
+    Float result = LinearInterpolateSpectralCurve(
+        lambda, values, 2, 450.f);
+
+    EXPECT_FLOAT_EQ(result, 0.4f);
+}
+
+TEST(QESamplingTest, FractionalInterpolation) {
+    Float lambda[] = {400.f, 500.f};
+    Float values[] = {0.f, 1.f};
+
+    EXPECT_FLOAT_EQ(
+        LinearInterpolateSpectralCurve(lambda, values, 2, 425.f),
+        0.25f);
+
+    EXPECT_FLOAT_EQ(
+        LinearInterpolateSpectralCurve(lambda, values, 2, 475.f),
+        0.75f);
+};
+
+TEST(QESamplingTest, PreservesMidpoint) {
+    Float lambda[] = {400.f, 450.f, 500.f};
+    Float values[] = {0.2f, 0.4f, 0.8f};
+
+    Float v1 = LinearInterpolateSpectralCurve(lambda, values, 3, 425.f);
+    Float v2 = LinearInterpolateSpectralCurve(lambda, values, 3, 475.f);
+
+    EXPECT_GT(v2, v1);
+}
