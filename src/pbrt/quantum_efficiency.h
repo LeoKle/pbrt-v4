@@ -303,7 +303,7 @@ inline constexpr float QE_YELLOW[QE_SAMPLES] = {
 };
 
 namespace pbrt {
-    enum class MosaicType : uint8_t {
+    enum class FilterType : uint8_t {
     R = 0,
     G,
     B,
@@ -314,7 +314,7 @@ namespace pbrt {
     Count
 };
 
-static_assert(int(MosaicType::Count) == 7);
+static_assert(int(FilterType::Count) == 7);
 
 struct SpectralCurve {
     const Float* bands; // wavelengths in nanometers
@@ -332,7 +332,7 @@ PBRT_CPU_GPU inline constexpr SpectralCurve QECurves[] = {
     { QE_BANDS, QE_MONO,    QE_SAMPLES }  // MONO
 };
 
-static_assert(int(MosaicType::Count) ==
+static_assert(int(FilterType::Count) ==
               int(sizeof(QECurves) / sizeof(QECurves[0])));
 
 PBRT_CPU_GPU inline Float LinearInterpolateSpectralCurve(
@@ -370,13 +370,13 @@ PBRT_CPU_GPU inline Float LinearInterpolateSpectralCurve(
 };
 
 
-PBRT_CPU_GPU inline const SpectralCurve& GetQECurve(MosaicType t)
+PBRT_CPU_GPU inline const SpectralCurve& GetQECurve(FilterType t)
 {
     return QECurves[static_cast<int>(t)];
 };
 
 PBRT_CPU_GPU inline Float GetFilterQE(
-    MosaicType mosaic,
+    FilterType mosaic,
     Float lambda)
 {
     const SpectralCurve& c = GetQECurve(mosaic);
@@ -384,18 +384,18 @@ PBRT_CPU_GPU inline Float GetFilterQE(
 }
 
 PBRT_CPU_GPU
-inline MosaicType CharToMosaic(char c) {
+inline FilterType CharToMosaic(char c) {
     switch (c) {
-    case 'R': return MosaicType::R;
-    case 'G': return MosaicType::G;
-    case 'B': return MosaicType::B;
-    case 'C': return MosaicType::C;
-    case 'Y': return MosaicType::Y;
-    case 'M': return MosaicType::M;
-    case 'W': return MosaicType::MONO;
+    case 'R': return FilterType::R;
+    case 'G': return FilterType::G;
+    case 'B': return FilterType::B;
+    case 'C': return FilterType::C;
+    case 'Y': return FilterType::Y;
+    case 'M': return FilterType::M;
+    case 'W': return FilterType::MONO;
     default:
         ErrorExit("Unknown CFA pattern character '%c'", c);
-        return MosaicType::MONO;
+        return FilterType::MONO;
     }
 };
 }

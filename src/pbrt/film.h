@@ -627,7 +627,7 @@ class ColorFilterArrayFilm : public FilmBase {
     }
 
     PBRT_CPU_GPU
-    inline MosaicType GetMosaicType(int x, int y) const {
+    inline FilterType GetMosaicType(int x, int y) const {
         // convert absolute coords to coords on CFA pattern
         int px = (x - pixelBounds.pMin.x) % patternWidth;
         int py = (y - pixelBounds.pMin.y) % patternHeight;
@@ -664,7 +664,7 @@ class ColorFilterArrayFilm : public FilmBase {
     SquareMatrix<3> outputRGBFromSensorRGB;
 
     int patternWidth, patternHeight;
-    std::vector<MosaicType> cfaPattern;
+    std::vector<FilterType> cfaPattern;
 };
 
 PBRT_CPU_GPU

@@ -6,8 +6,8 @@
 using namespace pbrt;
 
 TEST(QESamplingTest, BasicRange) {
-    for (int i = 0; i < int(MosaicType::Count); ++i) {
-        MosaicType m = static_cast<MosaicType>(i);
+    for (int i = 0; i < int(FilterType::Count); ++i) {
+        FilterType m = static_cast<FilterType>(i);
         const SpectralCurve& curve = GetQECurve(m);
 
         Float first = GetFilterQE(m, curve.bands[0]);
@@ -26,7 +26,7 @@ TEST(QESamplingTest, BasicRange) {
 }
 
 TEST(QESamplingTest, Interpolation) {
-    MosaicType m = MosaicType::R;
+    FilterType m = FilterType::R;
     const SpectralCurve& curve = GetQECurve(m);
 
     // Pick two adjacent bands
@@ -43,7 +43,7 @@ TEST(QESamplingTest, Interpolation) {
 }
 
 TEST(QESamplingTest, Extrapolation) {
-    MosaicType m = MosaicType::G;
+    FilterType m = FilterType::G;
     const SpectralCurve& curve = GetQECurve(m);
 
     // below first band
