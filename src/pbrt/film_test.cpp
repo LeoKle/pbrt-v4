@@ -104,8 +104,8 @@ TEST(CFAFilmRender, DefaultZeroCheck) {
     ASSERT_NE(film, nullptr) << "Film construction failed.";
 
     // assert film pixels rgb and intensity are 0 by default
-    for(int x = 0; x < xresolution; ++x) {
-        for (int y = 0; y < yresolution;++y) {
+    for (int x = 0; x < xresolution; ++x) {
+        for (int y = 0; y < yresolution; ++y) {
             const auto rgb = film->GetPixelRGB(Point2i(x, y), 1);
             ASSERT_EQ(rgb.r, 0);
             ASSERT_EQ(rgb.g, 0);
@@ -117,7 +117,7 @@ TEST(CFAFilmRender, DefaultZeroCheck) {
     }
 
     constexpr Float lambda = 550.f;
-    constexpr Float eps = 1e-3f; // 0.001 nm
+    constexpr Float eps = 1e-3f;  // 0.001 nm
 
     SampledWavelengths swl =
         SampledWavelengths::SampleUniform(0.5f, lambda - eps, lambda + eps);
@@ -128,12 +128,11 @@ TEST(CFAFilmRender, DefaultZeroCheck) {
     for (int i = 0; i < NSpectrumSamples; ++i)
         L[i] = 1.f;
 
-    film->AddSample(
-        Point2i(0, 0),   // pixel
-        L,               // spectrum
-        swl,             // wavelengths
-        nullptr,         // visible surface (unused)
-        1.f              // weight
+    film->AddSample(Point2i(0, 0),  // pixel
+                    L,              // spectrum
+                    swl,            // wavelengths
+                    nullptr,        // visible surface (unused)
+                    1.f             // weight
     );
 
     const auto rgb1 = film->GetPixelRGB(Point2i(0, 0), 1);
@@ -145,12 +144,22 @@ TEST(CFAFilmRender, DefaultZeroCheck) {
     alloc.delete_object(film);
 }
 
-TEST(CFAFilmRender, AddSample550nm) {
-    // assert that wavelength with lower quantum efficiency has lower intensity
-    // TODO: parameterize with configurable lambda1, lambda2 and filter type
+struct CFAFilmQEParam {
+    Float lambda_qe_low;
+    Float lambda_qe_high;
+    std::string mosaic;
+};
+
+class CFAFilmRenderQE : public ::testing::TestWithParam<CFAFilmQEParam> {};
+
+TEST_P(CFAFilmRenderQE, AddSampleCompareQE) {
+    const auto &p = GetParam();
+
     const int xresolution = 500;
     const int yresolution = 500;
-    const auto params = createParameterDictionary(1, 1, "R", xresolution, yresolution);
+
+    const auto params =
+        createParameterDictionary(1, 1, p.mosaic.c_str(), xresolution, yresolution);
 
     Float exposure = 1.0f;
     Filter filter = new BoxFilter(Vector2f(0.5, 0.5));
@@ -161,54 +170,42 @@ TEST(CFAFilmRender, AddSample550nm) {
     ColorFilterArrayFilm *film =
         ColorFilterArrayFilm::Create(params, exposure, filter, cs, &loc, alloc);
 
-    ASSERT_NE(film, nullptr) << "Film construction failed.";
+    ASSERT_NE(film, nullptr);
 
-    // add 550nm to (0,0)
-    const auto sample_point1 = Point2i(0, 0);
-    constexpr Float lambda1 = 550.f;
-    constexpr Float eps1 = 1e-3f; // 0.001 nm
-
-    SampledWavelengths swl550nm =
-        SampledWavelengths::SampleUniform(0.5f, lambda1 - eps1, lambda1 + eps1);
-
+    constexpr Float eps = 1e-3f;
 
     SampledSpectrum L;
     for (int i = 0; i < NSpectrumSamples; ++i)
         L[i] = 1.f;
 
-    film->AddSample(
-        sample_point1,   // pixel
-        L,               // spectrum
-        swl550nm,        // wavelengths
-        nullptr,         // visible surface (unused)
-        1.f              // weight
-    );
+    // first wavelength
+    Point2i p0(0, 0);
+    auto swlLow =
+        SampledWavelengths::SampleUniform(0.5f, p.lambda_qe_low - eps, p.lambda_qe_low + eps);
 
-    const auto intensity00 = film->GetIntensity(sample_point1);
+    film->AddSample(p0, L, swlLow, nullptr, 1.f);
+    Float i0 = film->GetIntensity(p0);
 
-    ASSERT_GT(intensity00, 0);
+    ASSERT_GT(i0, 0) << "Expected greater than 0 intensity, got " << p.lambda_qe_low;
 
-    // add 610nm to (0,1)
-    const auto sample_point2 = Point2i(0, 1);
-    constexpr Float lambda2 = 610.f;
-    constexpr Float eps2 = 1e-3f; // 0.001 nm
+    // second wavelength
+    Point2i p1(0, 1);
+    auto swlHigh =
+        SampledWavelengths::SampleUniform(0.5f, p.lambda_qe_high - eps, p.lambda_qe_high + eps);
 
-    SampledWavelengths swl610nm =
-        SampledWavelengths::SampleUniform(lambda2, lambda2 - eps2, lambda2 + eps2);
-    film->AddSample(
-        sample_point2,   // pixel
-        L,               // spectrum
-        swl610nm,        // wavelengths
-        nullptr,         // visible surface (unused)
-        1.f              // weight
-    );
+    film->AddSample(p1, L, swlHigh, nullptr, 1.f);
+    Float i1 = film->GetIntensity(p1);
 
-    const auto intensity01 = film->GetIntensity(sample_point2);
-
-    ASSERT_GT(intensity01, intensity00);
+    EXPECT_GT(i1, i0) << "Expected " << p.lambda_qe_low << " nm to have lower intensity than "
+                      << p.lambda_qe_high << "nm at " << p.mosaic;
 
     alloc.delete_object(film);
 }
+
+INSTANTIATE_TEST_CASE_P(CFAQuantumEfficiency, CFAFilmRenderQE,
+                        ::testing::Values(CFAFilmQEParam{550.f, 610.f, "R"},
+                                          CFAFilmQEParam{450.f, 525.f, "G"},
+                                          CFAFilmQEParam{600.f, 450.f, "B"}));
 
 // TEST(CFAFilmRender, Template) {
 //     const int xresolution = 500;
@@ -231,7 +228,6 @@ TEST(CFAFilmRender, AddSample550nm) {
 
 //     SampledWavelengths swl =
 //         SampledWavelengths::SampleUniform(0.5f, lambda - eps, lambda + eps);
-
 
 //     SampledSpectrum L;
 //     for (int i = 0; i < NSpectrumSamples; ++i)
