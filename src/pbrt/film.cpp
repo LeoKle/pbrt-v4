@@ -1164,7 +1164,7 @@ PBRT_CPU_GPU void ColorFilterArrayFilm::AddSplat(Point2f p, SampledSpectrum L,
 
         SampledSpectrum Lf = L;
         for (int i = 0; i < NSpectrumSamples; ++i)
-            Lf[i] *= SampleMosaicQE(mosaic_type, lambda[i]);
+            Lf[i] *= GetFilterQE(mosaic_type, lambda[i]);
 
         RGB rgb = sensor->ToSensorRGB(Lf, lambda);
         Float m = std::max({rgb.r, rgb.g, rgb.b});

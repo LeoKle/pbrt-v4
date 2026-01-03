@@ -10,9 +10,9 @@ TEST(QESamplingTest, BasicRange) {
         MosaicType m = static_cast<MosaicType>(i);
         const SpectralCurve& curve = GetQECurve(m);
 
-        Float first = SampleMosaicQE(m, curve.bands[0]);
-        Float mid   = SampleMosaicQE(m, curve.bands[curve.n / 2]);
-        Float last  = SampleMosaicQE(m, curve.bands[curve.n - 1]);
+        Float first = GetFilterQE(m, curve.bands[0]);
+        Float mid   = GetFilterQE(m, curve.bands[curve.n / 2]);
+        Float last  = GetFilterQE(m, curve.bands[curve.n - 1]);
 
         EXPECT_GE(first, 0.f);
         EXPECT_LE(first, 1.f);
@@ -38,7 +38,7 @@ TEST(QESamplingTest, Interpolation) {
 
     // Midpoint should be roughly average of val0 and val1
     Float midLambda = 0.5f * (lambda0 + lambda1);
-    Float midVal = SampleMosaicQE(m, midLambda);
+    Float midVal = GetFilterQE(m, midLambda);
     EXPECT_NEAR(midVal, 0.5f * (val0 + val1), 1e-6f);
 }
 
@@ -47,10 +47,10 @@ TEST(QESamplingTest, Extrapolation) {
     const SpectralCurve& curve = GetQECurve(m);
 
     // below first band
-    Float below = SampleMosaicQE(m, curve.bands[0] - 10.f);
+    Float below = GetFilterQE(m, curve.bands[0] - 10.f);
     EXPECT_GE(below, 0.f);
 
     // above last band
-    Float above = SampleMosaicQE(m, curve.bands[curve.n - 1] + 10.f);
+    Float above = GetFilterQE(m, curve.bands[curve.n - 1] + 10.f);
     EXPECT_GE(above, 0.f);
 }

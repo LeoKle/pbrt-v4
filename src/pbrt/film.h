@@ -547,7 +547,7 @@ class ColorFilterArrayFilm : public FilmBase {
         for (int i = 0; i < NSpectrumSamples; i++) {
             const auto wavelength = lambda[i];
 
-            L[i] *= SampleMosaicQE(mosaic_type, wavelength);
+            L[i] *= GetFilterQE(mosaic_type, wavelength);
         }
 
         // from RGBFilm::AddSample()

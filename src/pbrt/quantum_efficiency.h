@@ -335,7 +335,7 @@ PBRT_CPU_GPU inline constexpr SpectralCurve QECurves[] = {
 static_assert(int(MosaicType::Count) ==
               int(sizeof(QECurves) / sizeof(QECurves[0])));
 
-PBRT_CPU_GPU inline Float SampleSpectralCurve(
+PBRT_CPU_GPU inline Float LinearInterpolateSpectralCurve(
     const Float* __restrict bands,
     const Float* __restrict values,
     int n,
@@ -375,12 +375,12 @@ PBRT_CPU_GPU inline const SpectralCurve& GetQECurve(MosaicType t)
     return QECurves[static_cast<int>(t)];
 };
 
-PBRT_CPU_GPU inline Float SampleMosaicQE(
+PBRT_CPU_GPU inline Float GetFilterQE(
     MosaicType mosaic,
     Float lambda)
 {
     const SpectralCurve& c = GetQECurve(mosaic);
-    return SampleSpectralCurve(c.bands, c.values, c.n, lambda);
+    return LinearInterpolateSpectralCurve(c.bands, c.values, c.n, lambda);
 }
 
 PBRT_CPU_GPU
