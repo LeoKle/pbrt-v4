@@ -543,7 +543,7 @@ class ColorFilterArrayFilm : public FilmBase {
     void AddSample(Point2i pFilm, SampledSpectrum L, const SampledWavelengths &lambda,
                    const VisibleSurface *, Float weight) {
         
-        const auto mosaic_type = this->GetMosaicType(pFilm.x, pFilm.y);
+        const auto mosaic_type = this->GetFilterType(pFilm.x, pFilm.y);
         for (int i = 0; i < NSpectrumSamples; i++) {
             const auto wavelength = lambda[i];
 
@@ -627,7 +627,7 @@ class ColorFilterArrayFilm : public FilmBase {
     }
 
     PBRT_CPU_GPU
-    inline FilterType GetMosaicType(int x, int y) const {
+    inline FilterType GetFilterType(int x, int y) const {
         // convert absolute coords to coords on CFA pattern
         int px = (x - pixelBounds.pMin.x) % patternWidth;
         int py = (y - pixelBounds.pMin.y) % patternHeight;

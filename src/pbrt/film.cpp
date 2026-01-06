@@ -1160,7 +1160,7 @@ PBRT_CPU_GPU void ColorFilterArrayFilm::AddSplat(Point2f p, SampledSpectrum L,
         if (wt == 0) continue;
 
         Pixel &pixel = pixels[pi];
-        const auto mosaic_type = this->GetMosaicType(pi.x, pi.y);
+        const auto mosaic_type = this->GetFilterType(pi.x, pi.y);
 
         SampledSpectrum Lf = L;
         for (int i = 0; i < NSpectrumSamples; ++i)
