@@ -1064,6 +1064,226 @@ SpectralFilm *SpectralFilm::Create(const ParameterDictionary &parameters,
                                           writeFP16, alloc);
 }
 
+// ColorFilterArrayFilm Method Definitions
+ColorFilterArrayFilm::ColorFilterArrayFilm(FilmBaseParameters p, Float lambdaMin, Float lambdaMax,
+                           const RGBColorSpace *colorSpace,
+                           Float maxComponentValue, bool writeFP16, Allocator alloc, 
+                           int patternWidth, int patternHeight, const std::string& pattern)
+    : FilmBase(p),
+      colorSpace(colorSpace),
+      lambdaMin(lambdaMin),
+      lambdaMax(lambdaMax),
+      maxComponentValue(maxComponentValue),
+      writeFP16(writeFP16),
+      pixels(p.pixelBounds, alloc),
+      patternWidth(patternWidth),
+      patternHeight(patternHeight) {
+    // SETUP CFA PATTERN
+    if ((int)pattern.size() != patternWidth * patternHeight) {
+        ErrorExit("CFA pattern size mismatch: expected %d chars, got %d",
+              patternWidth * patternHeight, int(pattern.size()));
+        return;
+    }
+
+    cfaPattern.resize(patternWidth * patternHeight);
+    for (int y = 0; y < patternHeight; ++y) {
+        for (int x = 0; x < patternWidth; ++x) {
+            char c = pattern[y * patternWidth + x];
+            cfaPattern[y * patternWidth + x] = CharToFilter(c);
+        }
+    }
+
+    // No extra RGB transform for CFA (multiplication with identity)
+    outputRGBFromSensorRGB =
+        SquareMatrix<3>(1.f, 0.f, 0.f,
+                        0.f, 1.f, 0.f,
+                        0.f, 0.f, 1.f);
+
+    filterIntegral = filter.Integral();
+    CHECK(!pixelBounds.IsEmpty());
+    filmPixelMemory +=
+        pixelBounds.Area() * (sizeof(Pixel));
+}
+
+PBRT_CPU_GPU RGB ColorFilterArrayFilm::GetPixelRGB(Point2i p, Float splatScale) const {
+    // Note: this is effectively the same as RGBFilm::GetPixelRGB
+
+    const Pixel &pixel = pixels[p];
+    RGB rgb(pixel.rgbSum[0], pixel.rgbSum[1], pixel.rgbSum[2]);
+    // Normalize _rgb_ with weight sum
+    Float weightSum = pixel.rgbWeightSum;
+    if (weightSum != 0)
+        rgb /= weightSum;
+
+    // Add splat value at pixel
+    for (int c = 0; c < 3; ++c)
+        rgb[c] += splatScale * pixel.rgbSplat[c] / filterIntegral;
+
+    // Convert _rgb_ to output RGB color space
+    rgb = outputRGBFromSensorRGB * rgb;
+
+    return rgb;
+}
+
+PBRT_CPU_GPU Float ColorFilterArrayFilm::GetIntensity(Point2i p) const {
+    const Pixel &pixel = pixels[p];
+
+    if (pixel.weightSums == 0) return 0;
+
+    return pixel.intensity / pixel.weightSums;
+}
+
+PBRT_CPU_GPU void ColorFilterArrayFilm::AddSplat(Point2f p, SampledSpectrum L,
+                            const SampledWavelengths &lambda) {
+    // This, too, is similar to RGBFilm::AddSplat(), with additions for
+    // spectra.
+
+    CHECK(!L.HasNaNs());
+
+    // Spectral clamping and normalization.
+    Float lm = L.MaxComponentValue();
+    if (lm > maxComponentValue)
+        L *= maxComponentValue / lm;
+    L = SafeDiv(L, lambda.PDF()) / NSpectrumSamples;
+
+    // Compute bounds of affected pixels for splat, _splatBounds_
+    Point2f pDiscrete = p + Vector2f(0.5, 0.5);
+    Vector2f radius = filter.Radius();
+    Bounds2i splatBounds(Point2i(Floor(pDiscrete - radius)),
+                         Point2i(Floor(pDiscrete + radius)) + Vector2i(1, 1));
+    splatBounds = Intersect(splatBounds, pixelBounds);
+
+    // Splat both RGB and spectral bucket contributions.
+    for (Point2i pi : splatBounds) {
+        // Evaluate filter at _pi_ and add splat contribution
+        Float wt = filter.Evaluate(Point2f(p - pi - Vector2f(0.5, 0.5)));
+        if (wt == 0) continue;
+
+        Pixel &pixel = pixels[pi];
+        const auto mosaic_type = this->GetFilterType(pi.x, pi.y);
+
+        SampledSpectrum Lf = L;
+        for (int i = 0; i < NSpectrumSamples; ++i)
+            Lf[i] *= GetFilterQE(mosaic_type, lambda[i]);
+
+        RGB rgb = sensor->ToSensorRGB(Lf, lambda);
+        Float m = std::max({rgb.r, rgb.g, rgb.b});
+        if (m > maxComponentValue)
+            rgb *= maxComponentValue / m;
+
+        for (int i = 0; i < 3; ++i)
+            pixel.rgbSplat[i].Add(wt * rgb[i]);
+
+        for (int i = 0; i < NSpectrumSamples; ++i) {
+            pixel.intensitySplat.Add(wt * Lf[i]);
+        }
+    }
+}
+
+void ColorFilterArrayFilm::WriteImage(ImageMetadata metadata, Float splatScale) {
+    Image image = GetImage(&metadata, splatScale);
+    LOG_VERBOSE("Writing image %s with bounds %s", filename, pixelBounds);
+    image.Write(filename, metadata);
+}
+
+Image ColorFilterArrayFilm::GetImage(ImageMetadata *metadata, Float splatScale) {
+    // Convert image to RGB and compute final pixel values
+    LOG_VERBOSE("Computing final weighted pixel values");
+    PixelFormat format = writeFP16 ? PixelFormat::Half : PixelFormat::Float;
+
+    std::vector<std::string> imageChannels{{"R", "G", "B", "I"}};
+    
+    Image image(format, Point2i(pixelBounds.Diagonal()), imageChannels);
+
+    std::atomic<int> nClamped{0};
+    ParallelFor2D(pixelBounds, [&](Point2i p) {
+        Pixel &pixel = pixels[p];
+        
+
+        // RGB:
+        RGB rgb = GetPixelRGB(p, splatScale);
+
+        // Clamp to max representable fp16 to avoid Infs
+        if (writeFP16) {
+            for (int c = 0; c < 3; ++c) {
+                if (rgb[c] > 65504) {
+                    rgb[c] = 65504;
+                    ++nClamped;
+                }
+            }
+        }
+
+        // RAW
+        Float intensity = 0.f;
+        if (pixel.weightSums > 0) {
+            intensity = pixel.intensity / pixel.weightSums + splatScale * pixel.intensitySplat / filterIntegral;
+            if (writeFP16 && intensity > 65504) {
+                intensity = 65504;
+                ++nClamped;
+            }
+        }
+
+        Point2i pOffset(p.x - pixelBounds.pMin.x,
+                        p.y - pixelBounds.pMin.y);
+
+        image.SetChannels(pOffset, {rgb[0], rgb[1], rgb[2], intensity});
+    });
+
+    if (nClamped.load() > 0)
+        Warning("%d pixel values clamped to maximum fp16 value.", nClamped.load());
+
+    metadata->pixelBounds = pixelBounds;
+    metadata->fullResolution = fullResolution;
+    metadata->colorSpace = colorSpace;
+    metadata->strings["spectralLayoutVersion"] = "1.0";
+    // FIXME: if the RealisticCamera is being used, then we're actually
+    // storing "J.m^-2", but that isn't a supported value for
+    // "emissiveUnits" in the spec.
+    metadata->strings["emissiveUnits"] = "W.m^-2.sr^-1";
+
+    return image;
+}
+
+std::string ColorFilterArrayFilm::ToString() const {
+    return StringPrintf("[ ColorFilterArrayFilm %s lambdaMin: %f lambdaMax: %f "
+                        "writeFP16: %s maxComponentValue: %f ]",
+                        BaseToString(), lambdaMin, lambdaMax, writeFP16,
+                        maxComponentValue);
+}
+
+ColorFilterArrayFilm *ColorFilterArrayFilm::Create(const ParameterDictionary &parameters,
+                                   Float exposureTime, Filter filter,
+                                   const RGBColorSpace *colorSpace, const FileLoc *loc,
+                                   Allocator alloc) {
+    const int patternWidth = parameters.GetOneInt("pattern_width", 2);
+    const int patternHeight = parameters.GetOneInt("pattern_height", 2);
+    const std::string pattern = parameters.GetOneString("pattern", "RGGB");
+
+    PixelSensor *sensor =
+        PixelSensor::Create(parameters, colorSpace, exposureTime, loc, alloc);
+    FilmBaseParameters filmBaseParameters(parameters, filter, sensor, loc);
+    bool writeFP16 = parameters.GetOneBool("savefp16", true);
+
+    if (!HasExtension(filmBaseParameters.filename, "exr"))
+        ErrorExit(loc, "%s: EXR is the only output format supported by the ColorFilterArrayFilm.",
+                  filmBaseParameters.filename);
+
+    Float lambdaMin = parameters.GetOneFloat("lambdamin", Lambda_min);
+    Float lambdaMax = parameters.GetOneFloat("lambdamax", Lambda_max);
+    if (lambdaMin < Lambda_min || lambdaMax > Lambda_max)
+        ErrorExit("Unfortunately pbrt must be recompiled to render wavelengths "
+                  "beyond the [%f,%f] range ([%f,%f] was specified). Please "
+                  "update Lambda_min and/or Lambda_max as necessary in "
+                  "src/pbrt/util/spectrum.h and recompile.", Lambda_min, Lambda_max,
+                  lambdaMin, lambdaMax);
+
+    Float maxComponentValue = parameters.GetOneFloat("maxcomponentvalue", Infinity);
+
+    return alloc.new_object<ColorFilterArrayFilm>(filmBaseParameters, lambdaMin, lambdaMax,
+                                          colorSpace, maxComponentValue,
+                                          writeFP16, alloc, patternWidth, patternHeight, pattern);
+}
+
 Film Film::Create(const std::string &name, const ParameterDictionary &parameters,
                   Float exposureTime, const CameraTransform &cameraTransform,
                   Filter filter, const FileLoc *loc, Allocator alloc) {
@@ -1077,6 +1297,9 @@ Film Film::Create(const std::string &name, const ParameterDictionary &parameters
     else if (name == "spectral")
         film = SpectralFilm::Create(parameters, exposureTime, filter,
                                     parameters.ColorSpace(), loc, alloc);
+    else if (name == "cfa")
+        film = ColorFilterArrayFilm::Create(parameters, exposureTime, filter,
+                                parameters.ColorSpace(), loc, alloc);
     else
         ErrorExit(loc, "%s: film type unknown.", name);
 
